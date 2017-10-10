@@ -9,6 +9,7 @@ var START_URL = "http://shirts4mike.com/shirts.php";
 
 var pagesVisited = {};
 var pagesToVisit = [];
+var shirtsToCsv = [];
 var url = new URL(START_URL);
 var baseUrl = url.protocol + "//" + url.hostname + "/";
 
@@ -48,10 +49,12 @@ function visitPage(url, callback) {
       var title = $("title").text();
       var price = $("span.price").text();
       var imgUrl = $("div.shirt-picture img").attr("src");
+      // set up csv file properties
       var now = new Date();
       var csv_filename = './data/' + now.toISOString().substring(0, 10) + '.csv';
       var fields = ['Title', 'Price', 'Image URL', 'URL', 'Time'];
-      var shirts = [ 
+
+      var shirt =
           {
           "Title": title,
           "Price": price,
@@ -59,20 +62,21 @@ function visitPage(url, callback) {
           "URL": url,
           "Time": Date(),
         }
-      ];
+      ;
 
-      var csv = json2csv({data: shirts, fields: fields});
 
-      fs.appendFileSync(csv_filename, csv, function(err) {
-        if (err) throw err;
-        console.log("file saved");
-      });
+    if (price) {
+        shirtsToCsv.push(shirt);
+    }
 
-      fs.appendFileSync("test.txt", '\n' + "URL: " + url + "\n" + "Title: " + title + "\n" + "Price: " + price + "\n" + "Image URL: " + baseUrl + imgUrl + '\n');
-        collectShirtLinks($);
-        callback();
-    });
+      console.log("final", shirtsToCsv);
+      var shirtscsv = json2csv({data: shirtsToCsv, fields: fields});
+      fs.writeFileSync(csv_filename, shirtscsv);
+      collectShirtLinks($);
+      callback();
+  });
 }
+
 
 // get the links for the shirts and put them in an array we can use
 function collectShirtLinks($) {
