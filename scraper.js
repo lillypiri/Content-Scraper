@@ -36,9 +36,12 @@ function scrape() {
 function visitPage(url, callback) {
     console.log("Visiting " + url);
     request(url, function(error, response, body) {
-      console.log("Status: " + response.statusCode);
       // if there's an error, let the user know
-      if (response.statusCode !== 200) {
+      if (error) {
+          console.log("Error: ", error.message)
+          fs.appendFileSync("scraper-error.log", "[" + Date() + "] : Error: " + error.message + '\n');
+          return;
+      } else if (response.statusCode !== 200) {
           console.log("There's been a " + response.statusCode + " error");
           fs.appendFileSync("scraper-error.log", "[" + Date() + "] : Error: " + response.statusCode + '\n');
         callback();
