@@ -34,7 +34,6 @@ function scrape() {
 }
 
 function visitPage(url, callback) {
-    console.log("Visiting " + url);
     request(url, function(error, response, body) {
       // if there's an error, let the user know
       if (error) {
@@ -72,7 +71,6 @@ function visitPage(url, callback) {
         shirtsToCsv.push(shirt);
     }
 
-      console.log("final", shirtsToCsv);
       var shirtscsv = json2csv({data: shirtsToCsv, fields: fields});
       fs.writeFileSync(csv_filename, shirtscsv);
       collectShirtLinks($);
