@@ -2,6 +2,7 @@ var request = require("request");
 var cheerio = require("cheerio");
 var fs = require("fs");
 var URL = require("url-parse");
+var json2csv = require("json2csv");
 
 var data = './data';
 var START_URL = "http://shirts4mike.com/shirts.php";
@@ -47,7 +48,26 @@ function visitPage(url, callback) {
       var title = $("title").text();
       var price = $("span.price").text();
       var imgUrl = $("div.shirt-picture img").attr("src");
-      console.log("URL: " + url + "\n" + "Title: " + title + "\n" + "Price: " + price + "\n" + "Image URL: " + baseUrl + imgUrl + "\n");
+      var now = new Date();
+      var csv_filename = './data/' + now.toISOString().substring(0, 10) + '.csv';
+      var fields = ['Title', 'Price', 'Image URL', 'URL', 'Time'];
+      var shirts = [ 
+          {
+          "Title": title,
+          "Price": price,
+          "Image URL": imgUrl,
+          "URL": url,
+          "Time": Date(),
+        }
+      ];
+
+      var csv = json2csv({data: shirts, fields: fields});
+
+      fs.appendFileSync(csv_filename, csv, function(err) {
+        if (err) throw err;
+        console.log("file saved");
+      });
+
       fs.appendFileSync("test.txt", '\n' + "URL: " + url + "\n" + "Title: " + title + "\n" + "Price: " + price + "\n" + "Image URL: " + baseUrl + imgUrl + '\n');
         collectShirtLinks($);
         callback();
