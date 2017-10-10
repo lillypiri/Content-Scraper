@@ -1,0 +1,21 @@
+{
+  "name": "content-scraper",
+  "version": "1.0.0",
+  "description": "Content Scraper for Treehouse project",
+  "main": "scraper.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node scraper.js"
+  },
+  "keywords": [
+    "scraper"
+  ],
+  "author": "Lilly Piri",
+  "license": "ISC",
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.2",
+    "papaparse": "^4.3.6",
+    "request": "^2.83.0",
+    "url-parse": "^1.1.9"
+  }
+}
