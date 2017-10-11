@@ -1,89 +1,92 @@
-var request = require("request");
-var cheerio = require("cheerio");
-var fs = require("fs");
-var URL = require("url-parse");
-var json2csv = require("json2csv");
+const request = require("request");
+// helps scrape the site
+const cheerio = require("cheerio");
+const fs = require("fs");
+const URL = require("url-parse");
+// csv package
+const json2csv = require("json2csv");
+const ora = require("ora");
 
-var data = './data';
+var data = "./data";
 var START_URL = "http://shirts4mike.com/shirts.php";
 
-var pagesVisited = {};
-var pagesToVisit = [];
-var shirtsToCsv = [];
-var url = new URL(START_URL);
-var baseUrl = url.protocol + "//" + url.hostname + "/";
-
-pagesToVisit.push(START_URL);
-scrape();
-
-// if the data folder doesn't exist, make it
-if (!fs.existsSync(data)) {
-    fs.mkdirSync(data);
-}
-
-// visit each shirt page
-function scrape() {
-    var nextPage = pagesToVisit.pop();
-    if (nextPage in pagesVisited) {
-        scrape();
-    } else  if (nextPage === undefined) {
-        return;
-    } else {
-        visitPage(nextPage, scrape);
-    }
-}
-
-function visitPage(url, callback) {
+function scrapeUrl(url) {
+  return new Promise((resolve, reject) => {
     request(url, function(error, response, body) {
-      // if there's an error, let the user know
-      if (error) {
-          console.log("Error: ", error.message)
-          fs.appendFileSync("scraper-error.log", "[" + Date() + "] : Error: " + error.message + '\n');
-          return;
-      } else if (response.statusCode !== 200) {
-          console.log("There's been a " + response.statusCode + " error");
-          fs.appendFileSync("scraper-error.log", "[" + Date() + "] : Error: " + response.statusCode + '\n');
-        callback();
-        return;
+      if (error || response.statusCode !== 200) {
+        return reject(new Error("There was an error when scraping the site."));
       }
-      //get the price, title, url and image url from the product page and create a text file with the scraped data
+
+      //get the price, title, url and image url from the product page
       var $ = cheerio.load(body);
       var title = $("title").text();
       var price = $("span.price").text();
       var imgUrl = $("div.shirt-picture img").attr("src");
-      // set up csv file properties
-      var now = new Date();
-      var csv_filename = './data/' + now.toISOString().substring(0, 10) + '.csv';
-      var fields = ['Title', 'Price', 'Image URL', 'URL', 'Time'];
 
-      var shirt =
-          {
-          "Title": title,
-          "Price": price,
-          "Image URL": imgUrl,
-          "URL": url,
-          "Time": Date(),
-        }
-      ;
+      var shirt = {
+        Title: title,
+        Price: price,
+        "Image URL": imgUrl,
+        URL: url,
+        Time: new Date()
+      };
 
+      return resolve(shirt);
+    });
+  });
+}
 
-    if (price) {
-        shirtsToCsv.push(shirt);
+function scrapeAll(urls) {
+  return Promise.all(urls.map(scrapeUrl)).then(shirts => {
+    return shirts;
+  });
+}
+
+function getShirtUrls(startUrl) {
+  return new Promise((resolve, reject) => {
+    request(startUrl, function(error, response, body) {
+      if (error || response.statusCode !== 200) {
+        return reject(new Error("There was an error when scraping the site."));
+      }
+      var $ = cheerio.load(body);
+      var url = new URL(START_URL);
+      var baseUrl = url.protocol + "//" + url.hostname + "/";
+      var shirtUrls = [];
+      $("a[href^='shirt.php?id=']").each(function() {
+        shirtUrls.push(baseUrl + $(this).attr("href"));
+      });
+      return resolve(shirtUrls);
+    });
+  });
+}
+
+function writeCSV(json) {
+    if (!fs.existsSync(data)) {
+      fs.mkdirSync(data);
     }
 
-      var shirtscsv = json2csv({data: shirtsToCsv, fields: fields});
-      fs.writeFileSync(csv_filename, shirtscsv);
-      collectShirtLinks($);
-      callback();
-  });
+    var now = new Date();
+    var csv_filename = "./data/" + now
+        .toISOString()
+        .substring(0, 10) + ".csv";
+    var fields = ["Title", "Price", "Image URL", "URL", "Time"];
+
+    var shirtscsv = json2csv({ data: json, fields: fields });
+    fs.writeFileSync(csv_filename, shirtscsv);
 }
 
+const spinner = ora("Scraping shirts").start();
 
-// get the links for the shirts and put them in an array we can use
-function collectShirtLinks($) {
-  var shirtLinks = $("a[href^='shirt.php?id=']");
-
-  shirtLinks.each(function() {
-    pagesToVisit.push(baseUrl + $(this).attr("href"));
+getShirtUrls(START_URL)
+  .then(shirtsUrls => {
+    spinner.text = 'Getting shirt information';
+    scrapeAll(shirtsUrls).then(shirts => {
+      spinner.text = "Writing to CSV file";
+      writeCSV(shirts);
+      spinner.succeed("CSV file written to ./data");
+    });
+  })
+  .catch(error => {
+    spinner.fail(error.message);
+    fs.appendFileSync("scraper-error.log", "[" + new Date() + "] : Error: " + error.message + "\n");
   });
-}
