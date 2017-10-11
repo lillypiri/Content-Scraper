@@ -27,13 +27,14 @@ function scrapeUrl(url) {
       var price = $("span.price").text();
       var baseUrl = "http://shirts4mike.com/"
       var imgUrl = baseUrl + $("div.shirt-picture img").attr("src");
+      var time = new Date();
 
       var shirt = {
         Title: title,
         Price: price,
         "Image URL": imgUrl,
         URL: url,
-        Time: new Date()
+        Time: time.toString()
       };
 
       return resolve(shirt);
