@@ -1,11 +1,13 @@
 const request = require("request");
-// helps scrape the site
-const cheerio = require("cheerio");
 const fs = require("fs");
 const URL = require("url-parse");
-// csv package
-const json2csv = require("json2csv");
+// the spinner
 const ora = require("ora");
+
+// chosen scraping and csv packages 
+const cheerio = require("cheerio");
+const json2csv = require("json2csv");
+
 
 var data = "./data";
 var START_URL = "http://shirts4mike.com/shirts.php";
@@ -23,7 +25,8 @@ function scrapeUrl(url) {
       var $ = cheerio.load(body);
       var title = $("title").text();
       var price = $("span.price").text();
-      var imgUrl = $("div.shirt-picture img").attr("src");
+      var baseUrl = "http://shirts4mike.com/"
+      var imgUrl = baseUrl + $("div.shirt-picture img").attr("src");
 
       var shirt = {
         Title: title,
